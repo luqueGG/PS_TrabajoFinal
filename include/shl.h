@@ -1,0 +1,71 @@
+#ifndef PSADMIN_SHL_H
+#define PSADMIN_SHL_H
+
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <time.h>
+#include "common.h"
+
+/* Tipo de entrada de directorio, simplificado para la UI */
+typedef enum {
+    SHL_ENTRY_FILE = 0,
+    SHL_ENTRY_DIR,
+    SHL_ENTRY_LINK,
+    SHL_ENTRY_OTHER
+} shl_entry_type_t;
+
+typedef struct {
+    char name[PS_NAME_MAX];
+    shl_entry_type_t type;
+    off_t size;
+    mode_t mode;
+    time_t mtime;
+} shl_entry_t;
+
+typedef struct {
+    char cwd[PS_PATH_MAX];
+    shl_entry_t *entries;
+    size_t count;
+    size_t capacity;
+    int selected; /* índice del cursor dentro de entries */
+} shl_state_t;
+
+/* --- Ciclo de vida --- */
+
+/* Inicializa el estado del explorador en start_path (NULL = $HOME) */
+int shl_init(shl_state_t *st, const char *start_path);
+
+/* Libera memoria reservada por shl_init / shl_reload */
+void shl_free(shl_state_t *st);
+
+/* --- Listado --- */
+
+/* Relee el directorio actual (st->cwd) y repuebla st->entries.
+ * Ordena: directorios primero, luego archivos, ambos alfabéticamente. */
+int shl_reload(shl_state_t *st);
+
+/* Cambia de directorio relativo a st->cwd (soporta "..") y recarga */
+int shl_chdir(shl_state_t *st, const char *target);
+
+/* Devuelve la ruta absoluta de la entrada actualmente seleccionada.
+ * out debe tener al menos PS_PATH_MAX bytes. Retorna 0 en éxito. */
+int shl_selected_path(const shl_state_t *st, char *out, size_t out_sz);
+
+/* --- Selección / navegación lógica (sin dibujar) --- */
+void shl_move_selection(shl_state_t *st, int delta);
+
+/* --- Respaldo automático ---
+ * Comprime (tar+gzip) la entrada seleccionada (archivo o directorio) y la
+ * deposita en dest_dir con un nombre con timestamp:
+ *   <nombre>_YYYYmmdd_HHMMSS.tar.gz
+ * Si dest_dir es NULL usa "<HOME>/.psadmin_backups".
+ * Retorna 0 en éxito, -1 en error (ver errno / stderr del subproceso). */
+int shl_backup_selected(const shl_state_t *st, const char *dest_dir,
+                         char *out_backup_path, size_t out_sz);
+
+/* Construye el nombre de archivo de respaldo (lógica pura, testeable) sin
+ * tocar el filesystem. base_name es el nombre original (sin ruta). */
+void shl_build_backup_name(const char *base_name, time_t now,
+                            char *out, size_t out_sz);
+
+#endif /* PSADMIN_SHL_H */
