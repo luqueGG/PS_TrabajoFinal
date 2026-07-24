@@ -68,6 +68,8 @@ real, que se valida manualmente / con PTY simulado.
 | `a` (en shl) | Analizar el script bash seleccionado → resultado en panel `con` |
 | `b` (en shl) | Crear respaldo (`tar.gz`) de la entrada seleccionada en `~/.psadmin_backups` |
 | `d` (en shl) | Eliminar la entrada seleccionada (recursivo si es directorio) |
+| `c` / `m` (en shl) | Marcar la entrada seleccionada para copiar / mover |
+| `p` (en shl) | Pegar (copiar/mover) lo marcado en el directorio actual |
 | `x` (en tsk) | Terminar proceso seleccionado (SIGTERM) |
 | `X` (en tsk) | Forzar terminación (SIGKILL) |
 | `s` (en tsk) | Suspender proceso (SIGSTOP) |

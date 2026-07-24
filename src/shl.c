@@ -182,6 +182,45 @@ int shl_delete_selected(shl_state_t *st) {
     return shl_reload(st);
 }
 
+int shl_clip_set(shl_state_t *st, int is_move) {
+    if (st->count == 0 || st->selected < 0 || st->selected >= (int)st->count) return -1;
+
+    const shl_entry_t *e = &st->entries[st->selected];
+    if (strcmp(e->name, "..") == 0) return -1;
+
+    snprintf(st->clip_path, sizeof(st->clip_path), "%s/%s", st->cwd, e->name);
+    st->clip_is_move = is_move;
+    return 0;
+}
+
+int shl_clip_paste(shl_state_t *st) {
+    if (st->clip_path[0] == '\0') return -1;
+
+    const char *base = strrchr(st->clip_path, '/');
+    base = base ? base + 1 : st->clip_path;
+
+    char dest[PS_PATH_MAX];
+    snprintf(dest, sizeof(dest), "%s/%s", st->cwd, base);
+
+    pid_t pid = fork();
+    if (pid < 0) return -1;
+    if (pid == 0) {
+        if (st->clip_is_move) {
+            execlp("mv", "mv", st->clip_path, dest, NULL);
+        } else {
+            execlp("cp", "cp", "-r", st->clip_path, dest, NULL);
+        }
+        _exit(127);
+    }
+    int status = 0;
+    waitpid(pid, &status, 0);
+    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) return -1;
+
+    st->clip_path[0] = '\0';
+    st->clip_is_move = 0;
+    return shl_reload(st);
+}
+
 void shl_build_backup_name(const char *base_name, time_t now, char *out, size_t out_sz) {
     struct tm tmv;
     localtime_r(&now, &tmv);

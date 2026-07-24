@@ -15,6 +15,8 @@
  *   a          - en shl: analizar el archivo bash seleccionado (-> panel con)
  *   b          - en shl: respaldar (backup) la entrada seleccionada
  *   d          - en shl: eliminar la entrada seleccionada (recursivo si es directorio)
+ *   c/m        - en shl: marcar la entrada seleccionada para copiar/mover
+ *   p          - en shl: pegar (copiar/mover) lo marcado en el directorio actual
  *   k (en tsk) - SIGTERM al proceso seleccionado   [tecla 'x' para no chocar con navegación]
  *   x          - en tsk: terminar proceso (SIGTERM)
  *   X          - en tsk: forzar terminación (SIGKILL)
@@ -210,7 +212,7 @@ static void render_status_bar(app_state_t *app, int term_rows, int term_cols) {
         snprintf(line, sizeof(line), "%s", app->status_msg);
     } else {
         snprintf(line, sizeof(line),
-                  "Tab: cambiar panel | j/k: mover | q: salir | (shl) a:analizar b:backup d:eliminar Enter:abrir | (tsk) x/X:kill s:stop r:cont /:buscar");
+                  "Tab: cambiar panel | j/k: mover | q: salir | (shl) a:analizar b:backup d:eliminar c/m:copiar/mover p:pegar Enter:abrir | (tsk) x/X:kill s:stop r:cont /:buscar");
     }
     int len = (int)strlen(line);
     if (len > term_cols) len = term_cols;
@@ -265,6 +267,33 @@ static void action_delete_selected(app_state_t *app) {
         snprintf(app->status_msg, sizeof(app->status_msg), "shl: eliminado %s", name);
     } else {
         snprintf(app->status_msg, sizeof(app->status_msg), "shl: error al eliminar %s", name);
+    }
+}
+
+static void action_shl_clip_mark(app_state_t *app, int is_move) {
+    if (app->shl.count == 0 || app->shl.selected < 0 ||
+        app->shl.selected >= (int)app->shl.count) {
+        snprintf(app->status_msg, sizeof(app->status_msg), "shl: nada seleccionado");
+        return;
+    }
+    const char *name = app->shl.entries[app->shl.selected].name;
+    if (shl_clip_set(&app->shl, is_move) == 0) {
+        snprintf(app->status_msg, sizeof(app->status_msg), "shl: marcado '%s' para %s",
+                  name, is_move ? "mover" : "copiar");
+    } else {
+        snprintf(app->status_msg, sizeof(app->status_msg), "shl: no se puede marcar '%s'", name);
+    }
+}
+
+static void action_shl_clip_paste(app_state_t *app) {
+    if (app->shl.clip_path[0] == '\0') {
+        snprintf(app->status_msg, sizeof(app->status_msg), "shl: portapapeles vacío");
+        return;
+    }
+    if (shl_clip_paste(&app->shl) == 0) {
+        snprintf(app->status_msg, sizeof(app->status_msg), "shl: pegado en %s", app->shl.cwd);
+    } else {
+        snprintf(app->status_msg, sizeof(app->status_msg), "shl: error al pegar");
     }
 }
 
@@ -356,6 +385,9 @@ static void handle_key_global_panel(app_state_t *app, char c) {
             else if (c == 'a') action_analyze_selected(app);
             else if (c == 'b') action_backup_selected(app);
             else if (c == 'd') action_delete_selected(app);
+            else if (c == 'c') action_shl_clip_mark(app, 0);
+            else if (c == 'm') action_shl_clip_mark(app, 1);
+            else if (c == 'p') action_shl_clip_paste(app);
             break;
         case PANEL_CON:
             /* por ahora sólo lectura; espacio para scroll futuro */

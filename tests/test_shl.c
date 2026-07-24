@@ -193,6 +193,82 @@ START_TEST(test_shl_delete_dotdot_fails) {
 }
 END_TEST
 
+START_TEST(test_shl_clip_copy_to_subdir) {
+    setup_tmp_tree();
+    shl_state_t st;
+    shl_init(&st, g_tmp_root);
+    st.selected = 3; /* "aaa_file.txt" */
+    ck_assert_str_eq(st.entries[3].name, "aaa_file.txt");
+
+    int rc = shl_clip_set(&st, 0 /* copiar */);
+    ck_assert_int_eq(rc, 0);
+
+    rc = shl_chdir(&st, "bbb_dir");
+    ck_assert_int_eq(rc, 0);
+
+    rc = shl_clip_paste(&st);
+    ck_assert_int_eq(rc, 0);
+
+    char src[PS_PATH_MAX], dst[PS_PATH_MAX];
+    snprintf(src, sizeof(src), "%s/aaa_file.txt", g_tmp_root);
+    snprintf(dst, sizeof(dst), "%s/bbb_dir/aaa_file.txt", g_tmp_root);
+
+    struct stat sb;
+    ck_assert_int_eq(stat(src, &sb), 0); /* original sigue existiendo (copia) */
+    ck_assert_int_eq(stat(dst, &sb), 0); /* copia llegó al destino */
+    ck_assert_str_eq(st.clip_path, "");  /* portapapeles se limpia tras pegar */
+    shl_free(&st);
+}
+END_TEST
+
+START_TEST(test_shl_clip_move_to_subdir) {
+    setup_tmp_tree();
+    shl_state_t st;
+    shl_init(&st, g_tmp_root);
+    st.selected = 3; /* "aaa_file.txt" */
+
+    int rc = shl_clip_set(&st, 1 /* mover */);
+    ck_assert_int_eq(rc, 0);
+
+    rc = shl_chdir(&st, "zzz_dir");
+    ck_assert_int_eq(rc, 0);
+
+    rc = shl_clip_paste(&st);
+    ck_assert_int_eq(rc, 0);
+
+    char src[PS_PATH_MAX], dst[PS_PATH_MAX];
+    snprintf(src, sizeof(src), "%s/aaa_file.txt", g_tmp_root);
+    snprintf(dst, sizeof(dst), "%s/zzz_dir/aaa_file.txt", g_tmp_root);
+
+    struct stat sb;
+    ck_assert_int_ne(stat(src, &sb), 0); /* el original ya no está (se movió) */
+    ck_assert_int_eq(stat(dst, &sb), 0); /* llegó al destino */
+    shl_free(&st);
+}
+END_TEST
+
+START_TEST(test_shl_clip_set_on_dotdot_fails) {
+    setup_tmp_tree();
+    shl_state_t st;
+    shl_init(&st, g_tmp_root);
+    st.selected = 0; /* ".." */
+    int rc = shl_clip_set(&st, 0);
+    ck_assert_int_ne(rc, 0);
+    ck_assert_str_eq(st.clip_path, "");
+    shl_free(&st);
+}
+END_TEST
+
+START_TEST(test_shl_clip_paste_without_mark_fails) {
+    setup_tmp_tree();
+    shl_state_t st;
+    shl_init(&st, g_tmp_root);
+    int rc = shl_clip_paste(&st);
+    ck_assert_int_ne(rc, 0);
+    shl_free(&st);
+}
+END_TEST
+
 Suite *shl_suite(void) {
     Suite *s = suite_create("shl");
     TCase *tc = tcase_create("core");
@@ -206,6 +282,10 @@ Suite *shl_suite(void) {
     tcase_add_test(tc, test_shl_delete_selected_file);
     tcase_add_test(tc, test_shl_delete_selected_dir_recursive);
     tcase_add_test(tc, test_shl_delete_dotdot_fails);
+    tcase_add_test(tc, test_shl_clip_copy_to_subdir);
+    tcase_add_test(tc, test_shl_clip_move_to_subdir);
+    tcase_add_test(tc, test_shl_clip_set_on_dotdot_fails);
+    tcase_add_test(tc, test_shl_clip_paste_without_mark_fails);
     suite_add_tcase(s, tc);
     return s;
 }

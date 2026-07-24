@@ -28,6 +28,10 @@ typedef struct {
     size_t count;
     size_t capacity;
     int selected; /* índice del cursor dentro de entries */
+
+    /* "portapapeles" de un solo slot para copiar/mover */
+    char clip_path[PS_PATH_MAX]; /* ruta absoluta marcada, vacío si no hay nada */
+    int clip_is_move;             /* 1 = mover al pegar, 0 = copiar */
 } shl_state_t;
 
 /* --- Ciclo de vida --- */
@@ -59,6 +63,17 @@ void shl_move_selection(shl_state_t *st, int delta);
  * contenido recursivamente. No permite eliminar "..". Recarga st->entries
  * tras eliminar con éxito. Retorna 0 en éxito, -1 en error. */
 int shl_delete_selected(shl_state_t *st);
+
+/* --- Copiar / mover ---
+ * shl_clip_set marca la entrada seleccionada (no permite "..") para una
+ * operación posterior de copiar (is_move=0) o mover (is_move=1). Retorna 0
+ * en éxito, -1 si no hay nada válido seleccionado.
+ *
+ * shl_clip_paste copia/mueve lo marcado hacia st->cwd (directorio actual),
+ * usando el mismo nombre base del origen. Recarga st->entries tras pegar.
+ * Retorna 0 en éxito, -1 si no había nada marcado o falló la operación. */
+int shl_clip_set(shl_state_t *st, int is_move);
+int shl_clip_paste(shl_state_t *st);
 
 /* --- Respaldo automático ---
  * Comprime (tar+gzip) la entrada seleccionada (archivo o directorio) y la
