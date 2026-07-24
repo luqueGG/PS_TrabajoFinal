@@ -25,13 +25,9 @@ jobs:
             pkg-config \
             check 
 
-      - name: Configure
-        run: cmake -G Ninja -B build -S .
+      - name: Build (make)
+        run: make
 
-      - name: Build
-        run: ninja -C build
-
-      - name: Run tests
-        working-directory: build
-        run: ctest --output-on-failure
+      - name: Run tests (make test)
+        run: make test
 
