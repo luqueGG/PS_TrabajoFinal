@@ -143,6 +143,45 @@ void shl_move_selection(shl_state_t *st, int delta) {
     st->selected = next;
 }
 
+static int shl_remove_recursive(const char *path) {
+    struct stat sb;
+    if (lstat(path, &sb) != 0) return -1;
+
+    if (!S_ISDIR(sb.st_mode)) {
+        return unlink(path) == 0 ? 0 : -1;
+    }
+
+    DIR *d = opendir(path);
+    if (!d) return -1;
+
+    int rc = 0;
+    struct dirent *de;
+    while ((de = readdir(d)) != NULL) {
+        if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) continue;
+        char child[PS_PATH_MAX];
+        snprintf(child, sizeof(child), "%s/%s", path, de->d_name);
+        if (shl_remove_recursive(child) != 0) rc = -1;
+    }
+    closedir(d);
+
+    if (rmdir(path) != 0) rc = -1;
+    return rc;
+}
+
+int shl_delete_selected(shl_state_t *st) {
+    if (st->count == 0 || st->selected < 0 || st->selected >= (int)st->count) return -1;
+
+    const shl_entry_t *e = &st->entries[st->selected];
+    if (strcmp(e->name, "..") == 0) return -1;
+
+    char path[PS_PATH_MAX];
+    snprintf(path, sizeof(path), "%s/%s", st->cwd, e->name);
+
+    if (shl_remove_recursive(path) != 0) return -1;
+
+    return shl_reload(st);
+}
+
 void shl_build_backup_name(const char *base_name, time_t now, char *out, size_t out_sz) {
     struct tm tmv;
     localtime_r(&now, &tmv);

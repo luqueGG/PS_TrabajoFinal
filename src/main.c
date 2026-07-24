@@ -14,6 +14,7 @@
  *   Enter      - en shl: entrar a directorio seleccionado / en tsk: ver árbol
  *   a          - en shl: analizar el archivo bash seleccionado (-> panel con)
  *   b          - en shl: respaldar (backup) la entrada seleccionada
+ *   d          - en shl: eliminar la entrada seleccionada (recursivo si es directorio)
  *   k (en tsk) - SIGTERM al proceso seleccionado   [tecla 'x' para no chocar con navegación]
  *   x          - en tsk: terminar proceso (SIGTERM)
  *   X          - en tsk: forzar terminación (SIGKILL)
@@ -209,7 +210,7 @@ static void render_status_bar(app_state_t *app, int term_rows, int term_cols) {
         snprintf(line, sizeof(line), "%s", app->status_msg);
     } else {
         snprintf(line, sizeof(line),
-                  "Tab: cambiar panel | j/k: mover | q: salir | (shl) a:analizar b:backup Enter:abrir | (tsk) x/X:kill s:stop r:cont /:buscar");
+                  "Tab: cambiar panel | j/k: mover | q: salir | (shl) a:analizar b:backup d:eliminar Enter:abrir | (tsk) x/X:kill s:stop r:cont /:buscar");
     }
     int len = (int)strlen(line);
     if (len > term_cols) len = term_cols;
@@ -244,6 +245,27 @@ static void action_analyze_selected(app_state_t *app) {
     strncpy(app->con_source_name, app->shl.entries[app->shl.selected].name,
              sizeof(app->con_source_name) - 1);
     snprintf(app->status_msg, sizeof(app->status_msg), "con: analizado %s", path);
+}
+
+static void action_delete_selected(app_state_t *app) {
+    if (app->shl.count == 0 || app->shl.selected < 0 ||
+        app->shl.selected >= (int)app->shl.count) {
+        snprintf(app->status_msg, sizeof(app->status_msg), "shl: nada seleccionado");
+        return;
+    }
+    char name[PS_NAME_MAX];
+    strncpy(name, app->shl.entries[app->shl.selected].name, sizeof(name) - 1);
+    name[sizeof(name) - 1] = '\0';
+
+    if (strcmp(name, "..") == 0) {
+        snprintf(app->status_msg, sizeof(app->status_msg), "shl: no se puede eliminar '..'");
+        return;
+    }
+    if (shl_delete_selected(&app->shl) == 0) {
+        snprintf(app->status_msg, sizeof(app->status_msg), "shl: eliminado %s", name);
+    } else {
+        snprintf(app->status_msg, sizeof(app->status_msg), "shl: error al eliminar %s", name);
+    }
 }
 
 static void action_backup_selected(app_state_t *app) {
@@ -333,6 +355,7 @@ static void handle_key_global_panel(app_state_t *app, char c) {
             else if (c == '\n' || c == '\r') action_shl_enter(app);
             else if (c == 'a') action_analyze_selected(app);
             else if (c == 'b') action_backup_selected(app);
+            else if (c == 'd') action_delete_selected(app);
             break;
         case PANEL_CON:
             /* por ahora sólo lectura; espacio para scroll futuro */

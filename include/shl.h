@@ -54,6 +54,12 @@ int shl_selected_path(const shl_state_t *st, char *out, size_t out_sz);
 /* --- Selección / navegación lógica (sin dibujar) --- */
 void shl_move_selection(shl_state_t *st, int delta);
 
+/* --- Eliminar ---
+ * Elimina la entrada actualmente seleccionada. Si es un directorio, borra su
+ * contenido recursivamente. No permite eliminar "..". Recarga st->entries
+ * tras eliminar con éxito. Retorna 0 en éxito, -1 en error. */
+int shl_delete_selected(shl_state_t *st);
+
 /* --- Respaldo automático ---
  * Comprime (tar+gzip) la entrada seleccionada (archivo o directorio) y la
  * deposita en dest_dir con un nombre con timestamp:

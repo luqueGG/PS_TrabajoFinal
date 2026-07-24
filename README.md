@@ -67,6 +67,7 @@ real, que se valida manualmente / con PTY simulado.
 | `Enter` (en shl) | Entrar al directorio seleccionado |
 | `a` (en shl) | Analizar el script bash seleccionado → resultado en panel `con` |
 | `b` (en shl) | Crear respaldo (`tar.gz`) de la entrada seleccionada en `~/.psadmin_backups` |
+| `d` (en shl) | Eliminar la entrada seleccionada (recursivo si es directorio) |
 | `x` (en tsk) | Terminar proceso seleccionado (SIGTERM) |
 | `X` (en tsk) | Forzar terminación (SIGKILL) |
 | `s` (en tsk) | Suspender proceso (SIGSTOP) |

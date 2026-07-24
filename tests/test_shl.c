@@ -132,6 +132,67 @@ START_TEST(test_shl_backup_selected_creates_tar) {
 }
 END_TEST
 
+START_TEST(test_shl_delete_selected_file) {
+    setup_tmp_tree();
+    shl_state_t st;
+    shl_init(&st, g_tmp_root);
+    st.selected = 3; /* "aaa_file.txt", ver test_shl_dirs_sorted_before_files */
+    ck_assert_str_eq(st.entries[3].name, "aaa_file.txt");
+
+    char path[PS_PATH_MAX];
+    snprintf(path, sizeof(path), "%s/aaa_file.txt", g_tmp_root);
+
+    int rc = shl_delete_selected(&st);
+    ck_assert_int_eq(rc, 0);
+
+    struct stat sb;
+    ck_assert_int_ne(stat(path, &sb), 0);
+    ck_assert_uint_eq(st.count, 3); /* "..", bbb_dir, zzz_dir */
+    shl_free(&st);
+}
+END_TEST
+
+START_TEST(test_shl_delete_selected_dir_recursive) {
+    setup_tmp_tree();
+    /* metemos contenido dentro de bbb_dir para probar el borrado recursivo */
+    char nested[PS_PATH_MAX];
+    snprintf(nested, sizeof(nested), "%s/bbb_dir/inner.txt", g_tmp_root);
+    FILE *f = fopen(nested, "w");
+    fputs("x\n", f);
+    fclose(f);
+
+    shl_state_t st;
+    shl_init(&st, g_tmp_root);
+    st.selected = 1; /* "bbb_dir" */
+    ck_assert_str_eq(st.entries[1].name, "bbb_dir");
+
+    char dir_path[PS_PATH_MAX];
+    snprintf(dir_path, sizeof(dir_path), "%s/bbb_dir", g_tmp_root);
+
+    int rc = shl_delete_selected(&st);
+    ck_assert_int_eq(rc, 0);
+
+    struct stat sb;
+    ck_assert_int_ne(stat(dir_path, &sb), 0);
+    ck_assert_uint_eq(st.count, 3); /* "..", aaa_file.txt, zzz_dir */
+    shl_free(&st);
+}
+END_TEST
+
+START_TEST(test_shl_delete_dotdot_fails) {
+    setup_tmp_tree();
+    shl_state_t st;
+    shl_init(&st, g_tmp_root);
+    st.selected = 0; /* ".." */
+    ck_assert_str_eq(st.entries[0].name, "..");
+
+    int rc = shl_delete_selected(&st);
+    ck_assert_int_ne(rc, 0);
+    ck_assert_uint_eq(st.count, 4); /* nada cambió */
+    shl_free(&st);
+}
+END_TEST
+
 Suite *shl_suite(void) {
     Suite *s = suite_create("shl");
     TCase *tc = tcase_create("core");
@@ -142,6 +203,9 @@ Suite *shl_suite(void) {
     tcase_add_test(tc, test_shl_chdir_into_subdir_and_back);
     tcase_add_test(tc, test_shl_build_backup_name_format);
     tcase_add_test(tc, test_shl_backup_selected_creates_tar);
+    tcase_add_test(tc, test_shl_delete_selected_file);
+    tcase_add_test(tc, test_shl_delete_selected_dir_recursive);
+    tcase_add_test(tc, test_shl_delete_dotdot_fails);
     suite_add_tcase(s, tc);
     return s;
 }
