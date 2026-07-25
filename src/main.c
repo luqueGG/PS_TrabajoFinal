@@ -17,6 +17,7 @@
  *   d          - en shl: eliminar la entrada seleccionada (recursivo si es directorio)
  *   c/m        - en shl: marcar la entrada seleccionada para copiar/mover
  *   p          - en shl: pegar (copiar/mover) lo marcado en el directorio actual
+ *   /          - en shl: buscar archivo/directorio por nombre en el directorio actual
  *   k (en tsk) - SIGTERM al proceso seleccionado   [tecla 'x' para no chocar con navegación]
  *   x          - en tsk: terminar proceso (SIGTERM)
  *   X          - en tsk: forzar terminación (SIGKILL)
@@ -55,7 +56,8 @@ typedef struct {
     ps_panel_id_t focus;
     ps_rect_t panels[PANEL_COUNT];
     char search_buf[PS_NAME_MAX];
-    int searching; /* 1 mientras se está escribiendo una búsqueda en tsk */
+    int searching; /* 1 mientras se está escribiendo una búsqueda */
+    ps_panel_id_t search_target; /* panel sobre el que aplica la búsqueda en curso */
 } app_state_t;
 
 static volatile int g_resized = 0;
@@ -212,7 +214,7 @@ static void render_status_bar(app_state_t *app, int term_rows, int term_cols) {
         snprintf(line, sizeof(line), "%s", app->status_msg);
     } else {
         snprintf(line, sizeof(line),
-                  "Tab: cambiar panel | j/k: mover | q: salir | (shl) a:analizar b:backup d:eliminar c/m:copiar/mover p:pegar Enter:abrir | (tsk) x/X:kill s:stop r:cont /:buscar");
+                  "Tab: cambiar panel | j/k: mover | q: salir | (shl) a:analizar b:backup d:eliminar c/m:copiar/mover p:pegar /:buscar Enter:abrir | (tsk) x/X:kill s:stop r:cont /:buscar");
     }
     int len = (int)strlen(line);
     if (len > term_cols) len = term_cols;
@@ -345,15 +347,28 @@ static ssize_t read_stdin_nonblock(char *buf, size_t maxlen) {
 static void handle_key_global_panel(app_state_t *app, char c) {
     if (app->searching) {
         if (c == '\n' || c == '\r') {
-            const tsk_proc_t *matches[64];
-            size_t n = tsk_search(&app->tsk, app->search_buf, matches, 64);
-            if (n > 0) {
-                for (size_t i = 0; i < app->tsk.count; i++) {
-                    if (&app->tsk.procs[i] == matches[0]) { app->tsk.selected = (int)i; break; }
+            if (app->search_target == PANEL_SHL) {
+                const shl_entry_t *matches[64];
+                size_t n = shl_search(&app->shl, app->search_buf, matches, 64);
+                if (n > 0) {
+                    for (size_t i = 0; i < app->shl.count; i++) {
+                        if (&app->shl.entries[i] == matches[0]) { app->shl.selected = (int)i; break; }
+                    }
+                    snprintf(app->status_msg, sizeof(app->status_msg), "shl: %zu coincidencia(s)", n);
+                } else {
+                    snprintf(app->status_msg, sizeof(app->status_msg), "shl: sin coincidencias");
                 }
-                snprintf(app->status_msg, sizeof(app->status_msg), "tsk: %zu coincidencia(s)", n);
             } else {
-                snprintf(app->status_msg, sizeof(app->status_msg), "tsk: sin coincidencias");
+                const tsk_proc_t *matches[64];
+                size_t n = tsk_search(&app->tsk, app->search_buf, matches, 64);
+                if (n > 0) {
+                    for (size_t i = 0; i < app->tsk.count; i++) {
+                        if (&app->tsk.procs[i] == matches[0]) { app->tsk.selected = (int)i; break; }
+                    }
+                    snprintf(app->status_msg, sizeof(app->status_msg), "tsk: %zu coincidencia(s)", n);
+                } else {
+                    snprintf(app->status_msg, sizeof(app->status_msg), "tsk: sin coincidencias");
+                }
             }
             app->searching = 0;
         } else if (c == 27) {
@@ -376,7 +391,7 @@ static void handle_key_global_panel(app_state_t *app, char c) {
             if (c == 'j') tsk_move_selection(&app->tsk, 1);
             else if (c == 'k') tsk_move_selection(&app->tsk, -1);
             else if (c == 'x' || c == 'X' || c == 's' || c == 'r') action_tsk_signal(app, c);
-            else if (c == '/') { app->searching = 1; app->search_buf[0] = '\0'; }
+            else if (c == '/') { app->searching = 1; app->search_buf[0] = '\0'; app->search_target = PANEL_TSK; }
             break;
         case PANEL_SHL:
             if (c == 'j') shl_move_selection(&app->shl, 1);
@@ -388,6 +403,7 @@ static void handle_key_global_panel(app_state_t *app, char c) {
             else if (c == 'c') action_shl_clip_mark(app, 0);
             else if (c == 'm') action_shl_clip_mark(app, 1);
             else if (c == 'p') action_shl_clip_paste(app);
+            else if (c == '/') { app->searching = 1; app->search_buf[0] = '\0'; app->search_target = PANEL_SHL; }
             break;
         case PANEL_CON:
             /* por ahora sólo lectura; espacio para scroll futuro */

@@ -1,5 +1,6 @@
 #include "shl.h"
 
+#include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
 #include <stdio.h>
@@ -219,6 +220,29 @@ int shl_clip_paste(shl_state_t *st) {
     st->clip_path[0] = '\0';
     st->clip_is_move = 0;
     return shl_reload(st);
+}
+
+size_t shl_search(const shl_state_t *st, const char *needle,
+                   const shl_entry_t **matches, size_t max_matches) {
+    size_t found = 0;
+    char lower_needle[PS_NAME_MAX];
+    size_t i;
+    for (i = 0; needle[i] && i < sizeof(lower_needle) - 1; i++)
+        lower_needle[i] = (char)tolower((unsigned char)needle[i]);
+    lower_needle[i] = '\0';
+
+    for (size_t k = 0; k < st->count && found < max_matches; k++) {
+        char lower_name[PS_NAME_MAX];
+        size_t j;
+        for (j = 0; st->entries[k].name[j] && j < sizeof(lower_name) - 1; j++)
+            lower_name[j] = (char)tolower((unsigned char)st->entries[k].name[j]);
+        lower_name[j] = '\0';
+
+        if (strstr(lower_name, lower_needle) != NULL) {
+            matches[found++] = &st->entries[k];
+        }
+    }
+    return found;
 }
 
 void shl_build_backup_name(const char *base_name, time_t now, char *out, size_t out_sz) {

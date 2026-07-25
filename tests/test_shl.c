@@ -269,6 +269,29 @@ START_TEST(test_shl_clip_paste_without_mark_fails) {
 }
 END_TEST
 
+START_TEST(test_shl_search_case_insensitive) {
+    setup_tmp_tree();
+    shl_state_t st;
+    shl_init(&st, g_tmp_root);
+    /* entradas: "..", "bbb_dir", "zzz_dir", "aaa_file.txt" */
+    const shl_entry_t *matches[8];
+    size_t n = shl_search(&st, "DIR", matches, 8);
+    ck_assert_uint_eq(n, 2);
+    shl_free(&st);
+}
+END_TEST
+
+START_TEST(test_shl_search_no_match) {
+    setup_tmp_tree();
+    shl_state_t st;
+    shl_init(&st, g_tmp_root);
+    const shl_entry_t *matches[8];
+    size_t n = shl_search(&st, "nope", matches, 8);
+    ck_assert_uint_eq(n, 0);
+    shl_free(&st);
+}
+END_TEST
+
 Suite *shl_suite(void) {
     Suite *s = suite_create("shl");
     TCase *tc = tcase_create("core");
@@ -286,6 +309,8 @@ Suite *shl_suite(void) {
     tcase_add_test(tc, test_shl_clip_move_to_subdir);
     tcase_add_test(tc, test_shl_clip_set_on_dotdot_fails);
     tcase_add_test(tc, test_shl_clip_paste_without_mark_fails);
+    tcase_add_test(tc, test_shl_search_case_insensitive);
+    tcase_add_test(tc, test_shl_search_no_match);
     suite_add_tcase(s, tc);
     return s;
 }

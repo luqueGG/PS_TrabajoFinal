@@ -75,6 +75,13 @@ int shl_delete_selected(shl_state_t *st);
 int shl_clip_set(shl_state_t *st, int is_move);
 int shl_clip_paste(shl_state_t *st);
 
+/* --- Búsqueda ---
+ * Filtra st->entries por subcadena en el nombre (case-insensitive), análogo
+ * a tsk_search. matches debe tener espacio para al menos max_matches
+ * punteros. Retorna la cantidad de coincidencias. */
+size_t shl_search(const shl_state_t *st, const char *needle,
+                   const shl_entry_t **matches, size_t max_matches);
+
 /* --- Respaldo automático ---
  * Comprime (tar+gzip) la entrada seleccionada (archivo o directorio) y la
  * deposita en dest_dir con un nombre con timestamp:

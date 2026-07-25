@@ -70,6 +70,7 @@ real, que se valida manualmente / con PTY simulado.
 | `d` (en shl) | Eliminar la entrada seleccionada (recursivo si es directorio) |
 | `c` / `m` (en shl) | Marcar la entrada seleccionada para copiar / mover |
 | `p` (en shl) | Pegar (copiar/mover) lo marcado en el directorio actual |
+| `/` (en shl) | Buscar archivo/directorio por nombre en el directorio actual |
 | `x` (en tsk) | Terminar proceso seleccionado (SIGTERM) |
 | `X` (en tsk) | Forzar terminación (SIGKILL) |
 | `s` (en tsk) | Suspender proceso (SIGSTOP) |
