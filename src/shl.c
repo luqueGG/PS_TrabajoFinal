@@ -245,6 +245,60 @@ size_t shl_search(const shl_state_t *st, const char *needle,
     return found;
 }
 
+static const char *shl_type_label(shl_entry_type_t t) {
+    switch (t) {
+        case SHL_ENTRY_DIR: return "directorio";
+        case SHL_ENTRY_LINK: return "symlink";
+        case SHL_ENTRY_FILE: return "archivo";
+        default: return "otro";
+    }
+}
+
+static void shl_format_perms(mode_t m, char *out /* >= 11 bytes */) {
+    out[0] = S_ISDIR(m) ? 'd' : (S_ISLNK(m) ? 'l' : '-');
+    out[1] = (m & S_IRUSR) ? 'r' : '-';
+    out[2] = (m & S_IWUSR) ? 'w' : '-';
+    out[3] = (m & S_IXUSR) ? 'x' : '-';
+    out[4] = (m & S_IRGRP) ? 'r' : '-';
+    out[5] = (m & S_IWGRP) ? 'w' : '-';
+    out[6] = (m & S_IXGRP) ? 'x' : '-';
+    out[7] = (m & S_IROTH) ? 'r' : '-';
+    out[8] = (m & S_IWOTH) ? 'w' : '-';
+    out[9] = (m & S_IXOTH) ? 'x' : '-';
+    out[10] = '\0';
+}
+
+static void shl_format_size(off_t size, char *out, size_t out_sz) {
+    static const char *units[] = {"B", "KB", "MB", "GB", "TB"};
+    double s = (double)size;
+    int u = 0;
+    while (s >= 1024.0 && u < 4) {
+        s /= 1024.0;
+        u++;
+    }
+    if (u == 0) {
+        snprintf(out, out_sz, "%ld B", (long)size);
+    } else {
+        snprintf(out, out_sz, "%.1f %s", s, units[u]);
+    }
+}
+
+void shl_format_entry_stats(const shl_entry_t *e, char *out, size_t out_sz) {
+    char perms[11];
+    shl_format_perms(e->mode, perms);
+
+    char size_str[32];
+    shl_format_size(e->size, size_str, sizeof(size_str));
+
+    char mtime_str[32];
+    struct tm tmv;
+    localtime_r(&e->mtime, &tmv);
+    strftime(mtime_str, sizeof(mtime_str), "%Y-%m-%d %H:%M:%S", &tmv);
+
+    snprintf(out, out_sz, "%s [%s] %s %s %s", e->name, shl_type_label(e->type),
+              perms, size_str, mtime_str);
+}
+
 void shl_build_backup_name(const char *base_name, time_t now, char *out, size_t out_sz) {
     struct tm tmv;
     localtime_r(&now, &tmv);

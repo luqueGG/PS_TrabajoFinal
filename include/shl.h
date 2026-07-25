@@ -82,6 +82,13 @@ int shl_clip_paste(shl_state_t *st);
 size_t shl_search(const shl_state_t *st, const char *needle,
                    const shl_entry_t **matches, size_t max_matches);
 
+/* --- Estadísticas de archivo ---
+ * Formatea en una sola línea: nombre, tipo, permisos estilo "ls -l" y
+ * tamaño legible (B/KB/MB/...) y fecha de modificación de una entrada.
+ * Función pura (no toca el filesystem), testeable con un shl_entry_t
+ * construido a mano. */
+void shl_format_entry_stats(const shl_entry_t *e, char *out, size_t out_sz);
+
 /* --- Respaldo automático ---
  * Comprime (tar+gzip) la entrada seleccionada (archivo o directorio) y la
  * deposita en dest_dir con un nombre con timestamp:

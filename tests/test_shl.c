@@ -292,6 +292,43 @@ START_TEST(test_shl_search_no_match) {
 }
 END_TEST
 
+START_TEST(test_shl_format_entry_stats_file) {
+    shl_entry_t e;
+    memset(&e, 0, sizeof(e));
+    strcpy(e.name, "script.sh");
+    e.type = SHL_ENTRY_FILE;
+    e.size = 2048; /* 2.0 KB */
+    e.mode = S_IFREG | 0644;
+    e.mtime = 1704165845; /* 2024-01-02 03:04:05 UTC aprox, depende de TZ */
+
+    char out[256];
+    shl_format_entry_stats(&e, out, sizeof(out));
+
+    ck_assert_ptr_nonnull(strstr(out, "script.sh"));
+    ck_assert_ptr_nonnull(strstr(out, "[archivo]"));
+    ck_assert_ptr_nonnull(strstr(out, "rw-r--r--"));
+    ck_assert_ptr_nonnull(strstr(out, "2.0 KB"));
+}
+END_TEST
+
+START_TEST(test_shl_format_entry_stats_dir) {
+    shl_entry_t e;
+    memset(&e, 0, sizeof(e));
+    strcpy(e.name, "proyecto");
+    e.type = SHL_ENTRY_DIR;
+    e.size = 4096;
+    e.mode = S_IFDIR | 0755;
+    e.mtime = 1704165845;
+
+    char out[256];
+    shl_format_entry_stats(&e, out, sizeof(out));
+
+    ck_assert_ptr_nonnull(strstr(out, "proyecto"));
+    ck_assert_ptr_nonnull(strstr(out, "[directorio]"));
+    ck_assert_ptr_nonnull(strstr(out, "drwxr-xr-x"));
+}
+END_TEST
+
 Suite *shl_suite(void) {
     Suite *s = suite_create("shl");
     TCase *tc = tcase_create("core");
@@ -311,6 +348,8 @@ Suite *shl_suite(void) {
     tcase_add_test(tc, test_shl_clip_paste_without_mark_fails);
     tcase_add_test(tc, test_shl_search_case_insensitive);
     tcase_add_test(tc, test_shl_search_no_match);
+    tcase_add_test(tc, test_shl_format_entry_stats_file);
+    tcase_add_test(tc, test_shl_format_entry_stats_dir);
     suite_add_tcase(s, tc);
     return s;
 }

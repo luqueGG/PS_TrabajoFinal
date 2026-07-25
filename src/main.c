@@ -18,6 +18,7 @@
  *   c/m        - en shl: marcar la entrada seleccionada para copiar/mover
  *   p          - en shl: pegar (copiar/mover) lo marcado en el directorio actual
  *   /          - en shl: buscar archivo/directorio por nombre en el directorio actual
+ *   i          - en shl: mostrar estadísticas (tipo, permisos, tamaño, fecha) de la selección
  *   k (en tsk) - SIGTERM al proceso seleccionado   [tecla 'x' para no chocar con navegación]
  *   x          - en tsk: terminar proceso (SIGTERM)
  *   X          - en tsk: forzar terminación (SIGKILL)
@@ -214,7 +215,7 @@ static void render_status_bar(app_state_t *app, int term_rows, int term_cols) {
         snprintf(line, sizeof(line), "%s", app->status_msg);
     } else {
         snprintf(line, sizeof(line),
-                  "Tab: cambiar panel | j/k: mover | q: salir | (shl) a:analizar b:backup d:eliminar c/m:copiar/mover p:pegar /:buscar Enter:abrir | (tsk) x/X:kill s:stop r:cont /:buscar");
+                  "Tab: cambiar panel | j/k: mover | q: salir | (shl) a:analizar b:backup d:eliminar c/m:copiar/mover p:pegar /:buscar i:info Enter:abrir | (tsk) x/X:kill s:stop r:cont /:buscar");
     }
     int len = (int)strlen(line);
     if (len > term_cols) len = term_cols;
@@ -297,6 +298,16 @@ static void action_shl_clip_paste(app_state_t *app) {
     } else {
         snprintf(app->status_msg, sizeof(app->status_msg), "shl: error al pegar");
     }
+}
+
+static void action_shl_show_stats(app_state_t *app) {
+    if (app->shl.count == 0 || app->shl.selected < 0 ||
+        app->shl.selected >= (int)app->shl.count) {
+        snprintf(app->status_msg, sizeof(app->status_msg), "shl: nada seleccionado");
+        return;
+    }
+    shl_format_entry_stats(&app->shl.entries[app->shl.selected], app->status_msg,
+                             sizeof(app->status_msg));
 }
 
 static void action_backup_selected(app_state_t *app) {
@@ -403,6 +414,7 @@ static void handle_key_global_panel(app_state_t *app, char c) {
             else if (c == 'c') action_shl_clip_mark(app, 0);
             else if (c == 'm') action_shl_clip_mark(app, 1);
             else if (c == 'p') action_shl_clip_paste(app);
+            else if (c == 'i') action_shl_show_stats(app);
             else if (c == '/') { app->searching = 1; app->search_buf[0] = '\0'; app->search_target = PANEL_SHL; }
             break;
         case PANEL_CON:
