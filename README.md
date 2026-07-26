@@ -1,6 +1,9 @@
-# psadmin
+# Proyecto Final PSAdmin
+### Integrantes
+- Bravo Arredondo Cristhian Matias
+- Luque Guevara Fernando Gerson
 
-Herramienta de administración de Linux en C, con interfaz de 4 paneles en modo
+Herramienta de administracion de Linux en C, con interfaz de 4 paneles en modo
 raw (ANSI puro, sin ncurses), inspirada en layouts tipo vim.
 
 ```
@@ -11,21 +14,24 @@ raw (ANSI puro, sin ncurses), inspirada en layouts tipo vim.
 +--------+-----------------+--------+
 ```
 
-## Módulos
+## Modulos
 
-| Módulo | Carpeta/archivo | Responsabilidad |
+| Modulo | Carpeta/archivo | Responsabilidad |
 |---|---|---|
-| **shl** (PSShell) | `src/shl.c` | Explorador de archivos del directorio del usuario + respaldo automático (`tar.gz` con timestamp) |
-| **tsk** (AdminTasks) | `src/tsk.c` | Lista procesos vía `/proc`, búsqueda, %CPU/MEM, kill/SIGKILL/stop/cont, árbol de procesos |
+| **shl** (PSShell) | `src/shl.c` | Explorador de archivos del directorio del usuario + respaldo automatico (`tar.gz` con timestamp) |
+| **tsk** (AdminTasks) | `src/tsk.c` | Lista procesos via `/proc`, busqueda, %CPU/MEM, kill/SIGKILL/stop/cont, arbol de procesos |
 | **cli** (PSCLI) | `src/cli.c` | Consola embebida **real**: `forkpty()` + `bash` interactivo, con I/O no bloqueante |
-| **con** (PSCon) | `src/con.c` | Analiza un script bash (seleccionado en `shl`) y detecta variables y ciclos. Diseñado como tabla de "analizadores" extensible (sumar uno nuevo = escribir 1 función + 1 línea en la tabla) |
-| **viz** (Visualizer) | `src/viz.c` | Raw mode de terminal (termios) + cálculo de layout de los 4 paneles + dibujo con escape codes ANSI |
-| (integrador) | `src/main.c` | Loop principal: foco rotativo entre paneles, lectura de teclado, refresco periódico de stats, reenvío de teclas al PTY cuando el foco está en `cli` |
+| **con** (PSCon) | `src/con.c` | Analiza un script bash (seleccionado en `shl`) y detecta variables y ciclos. Diseñado como tabla de "analizadores" extensible (sumar uno nuevo = escribir 1 funcion + 1 linea en la tabla) |
+| **viz** (Visualizer) | `src/viz.c` | Raw mode de terminal (termios) + calculo de layout de los 4 paneles + dibujo con escape codes ANSI |
+| (integrador) | `src/main.c` | Loop principal: foco rotativo entre paneles, lectura de teclado, refresco periodico de stats, reenvio de teclas al PTY cuando el foco esta en `cli` |
 
 ## Build
+Requiere Make
+
+## Build (con CMake)
 
 Requiere `cmake`, `ninja`, `libncurses-dev` (solo para herramientas del sistema,
-no se usa ncurses en el código), `check` (tests) y libutil (viene con glibc,
+no se usa ncurses en el codigo), `check` (tests) y libutil (viene con glibc,
 para `forkpty`).
 
 ```bash
@@ -49,9 +55,9 @@ ctest --output-on-failure
 ./tests/psadmin_tests
 ```
 
-Los tests cubren la **lógica pura** de cada módulo (parsing de `/proc/[pid]/stat`,
-análisis de bash, layout de paneles, buffer circular del PTY, listado/orden de
-directorios, navegación), evitando testear el renderizado ANSI o la terminal
+Los tests cubren la **logica pura** de cada modulo (parsing de `/proc/[pid]/stat`,
+analisis de bash, layout de paneles, buffer circular del PTY, listado/orden de
+directorios, navegacion), evitando testear el renderizado ANSI o la terminal
 real, que se valida manualmente / con PTY simulado.
 
 ## Uso
@@ -60,18 +66,18 @@ real, que se valida manualmente / con PTY simulado.
 ./build/psadmin
 ```
 
-| Tecla | Acción |
+| Tecla | Accion |
 |---|---|
 | `Tab` | Rotar foco entre paneles (tsk → con → shl → cli → tsk) |
-| `j` / `k` | Mover selección dentro del panel con foco (tsk: proceso, shl: archivo) |
+| `j` / `k` | Mover seleccion dentro del panel con foco (tsk: proceso, shl: archivo) |
 | `Enter` (en shl) | Entrar al directorio seleccionado |
 | `a` (en shl) | Analizar el script bash seleccionado → resultado en panel `con` |
 | `b` (en shl) | Crear respaldo (`tar.gz`) de la entrada seleccionada en `~/.psadmin_backups` |
 | `x` (en tsk) | Terminar proceso seleccionado (SIGTERM) |
-| `X` (en tsk) | Forzar terminación (SIGKILL) |
+| `X` (en tsk) | Forzar terminacion (SIGKILL) |
 | `s` (en tsk) | Suspender proceso (SIGSTOP) |
 | `r` (en tsk) | Reanudar proceso (SIGCONT) |
 | `/` (en tsk) | Buscar proceso por nombre |
-| (foco en cli) | Todo el teclado se reenvía directo al `bash` real corriendo dentro |
-| `q` | Salir (fuera de modo búsqueda) |
+| (foco en cli) | Todo el teclado se reenvia directo al `bash` real corriendo dentro |
+| `q` | Salir (fuera de modo busqueda) |
 
